@@ -114,8 +114,7 @@ removeDups [1,1,2,3,6,2] == [1,2,3,6]
 -- My simple database with a few students is a list of tuples. Each
 -- tuple stores the student's name and a list of classes. Nice and
 -- simple.
-{-
-let studentDB = [
+studentDB = [
 	("sally", 	["cpsc110", "cpsc312", "cpsc204"]),
 	("jim", 	["cpsc110", "cpsc313"]),
 	("bob", 	["cpsc121", "cpsc303", "cpsc212"]),
@@ -123,12 +122,45 @@ let studentDB = [
 	("billy", 	["cpsc312", "cpsc236"]),
 	("jane", 	["cpsc121"]),
 	("larry", 	["cpsc411", "cpsc236"]) ]
--}
 
 -- studentClasses takes a name and returns the classes the student has
 -- taken by accessing the "snd" part of the database tuple.
---studentClasses :: [Char] -> [Char]
-studentClasses s d = head [snd x | x <- d, fst x == s]
+studentClasses :: [Char] -> [[Char]]
+studentClasses s = head [snd x | x <- studentDB, fst x == s]
+
+-- Test cases for studentClasses
+{-
+studentClasses "larry" = ["cpsc411", "cpsc236"]
+studentClasses "jane" = ["cpsc121"]
+-}
+
+-- countClasses takes a name and returns the number of classes the student is taking.
+countClasses :: [Char] -> Int
+countClasses s = length (studentClasses s)
+
+-- Test cases for countClasses
+{-
+countClasses "larry" == 2
+countClasses "jane" == 1
+countClasses "bob" = 3
+-}
+
+-- countStudents takes a class name and returns the number of students enrolled.
+countStudents :: [Char] -> Int
+countStudents c = countStudentsHelper c studentDB 0
+
+-- countStudentsHelper walks the list of students and counts how many are in given class.
+countStudentsHelper :: (Num a2, Eq a) => a -> [(a1, [a])] -> a2 -> a2
+countStudentsHelper c d a
+	| null d					= a
+	| c `elem` snd (head (d)) 	= countStudentsHelper c (tail d) (a + 1)
+	| otherwise 				= countStudentsHelper c (tail d) a
+
+-- Test cases for countClasses
+{-
+countStudents "cpsc411" == 1
+countStudents "cpsc121" == 2
+-}
 
 -- romanDigit takes a single character in ['0'..'9'] and returns itsroman numeral.
 romanDigit :: Char -> String
@@ -144,7 +176,7 @@ romanDigit num
 	| num == '2' = "II"
 	| num == '1' = "I"
 
--- Test cases for removeDups
+-- Test cases for romanDigit
 {-
 romanDigit '0' == ""
 romanDigit '4' == "IV"
