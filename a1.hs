@@ -226,3 +226,46 @@ multiply_tr 1 2 == 2
 multiply_tr 3 4 == 12
 multiply_tr 4 2 == 8
 -}
+
+-- power raises the first argument to second without using tail recursion.
+power :: Int -> Int -> Int
+power b e
+	| b == 0	= 0
+	| e == 0	= 1
+	| e == 1	= b
+	| otherwise = multiply b (power b (e - 1))
+	
+-- Test cases for power
+{-
+power 0 1 == 0
+power 1 0 == 1
+power 0 2 == 0
+power 2 0 == 1
+power 1 3 == 1
+power 3 1 == 3
+power 2 3 == 8
+-}
+
+-- power_tr raises the first argument to second using tail recursion.
+power_tr :: Int -> Int -> Int
+power_tr b e
+	| b == 0	= 0
+	| e == 0	= 1
+	| otherwise = power_tr_helper b e 1
+	
+-- power_tr_helper computes a power using tail recursion with the help of an accumulator.
+power_tr_helper :: Int -> Int -> Int -> Int
+power_tr_helper b e a
+	| e == 0	= a
+	| otherwise = power_tr_helper b (e - 1) (multiply b a)
+	
+-- Test cases for power_tr
+{-
+power_tr 0 1 == 0
+power_tr 1 0 == 1
+power_tr 0 2 == 0
+power_tr 2 0 == 1
+power_tr 1 3 == 1
+power_tr 3 1 == 3
+power_tr 2 3 == 8
+-}
