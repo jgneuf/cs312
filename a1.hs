@@ -183,3 +183,46 @@ romanDigit '4' == "IV"
 romanDigit '9' == "IX"
 -}
 
+-- multiply takes two non-negative integers and multiplies them without using tail recursion.
+multiply :: Int -> Int -> Int
+multiply n1 n2
+	| n1 == 0 	= 0
+	| n2 == 0 	= 0
+	| n2 == 1 	= n1
+	| otherwise = n1 + multiply n1 (n2 - 1)
+
+-- Test cases for multiply
+{-
+multiply 1 0 == 0
+multiply 0 1 == 0
+multiply 2 1 == 2
+multiply 1 2 == 2
+multiply 3 4 == 12
+multiply 4 2 == 8
+-}
+
+-- multiply_tr takes two non-negative integers and multiplies them using tail recursion.
+multiply_tr :: Int -> Int -> Int
+multiply_tr n1 n2
+	| n1 == 0  = 0
+	| n2 == 0  = 0
+	| n1 == 1  = n2
+	| n2 == 1  = n1
+	|otherwise = multiply_tr_helper n1 n2 0
+
+-- multiply_tr_helper takes two numbers and stores the product through repeated addition
+-- using an accumulator.
+multiply_tr_helper :: Int -> Int -> Int -> Int
+multiply_tr_helper n1 n2 acc
+	| n2 == 0 	= acc
+	| otherwise = multiply_tr_helper n1 (n2 - 1) (n1 + acc)
+	
+-- Test cases for multiply_tr
+{-
+multiply_tr 1 0 == 0
+multiply_tr 0 1 == 0
+multiply_tr 2 1 == 2
+multiply_tr 1 2 == 2
+multiply_tr 3 4 == 12
+multiply_tr 4 2 == 8
+-}
