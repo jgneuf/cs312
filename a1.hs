@@ -34,8 +34,7 @@ isNum' "0901823401867a10384"
 -- This function calls a helper funtion to abstract unnecessary 
 -- complexity from the user.
 divisors :: Int -> [Int]
-divisors n =
-	divisorsHelper n 1 []
+divisors n = divisorsHelper n 1 []
 
 -- divisorsHelper returns a list of integers that divide the given 
 -- argument. The second argument is the potential divisor to be 
@@ -44,7 +43,7 @@ divisors n =
 divisorsHelper :: Int -> Int -> [Int] -> [Int]
 divisorsHelper num div lst
 	| div == num			= num:lst
-	| num `mod` div /= 0 	= divisorsHelper num (div + 1) lst
+	| num `mod` div /= 0	= divisorsHelper num (div + 1) lst
 	| otherwise				= div : divisorsHelper num (div + 1) lst
 
 -- Tests for divisors
@@ -77,7 +76,10 @@ isPrime 17 == True
 -- list of boolean values that correspond with the primality of each 
 -- number.
 isPrimeList :: [Int] -> [Bool]
-isPrimeList lst = map isPrime lst
+isPrimeList lst =
+	if null lst
+		then []
+		else isPrime (head lst) : isPrimeList (tail lst)
 
 -- isPrimeList tests
 {-
@@ -114,17 +116,38 @@ removeDups [1,1,2,3,6,2] == [1,2,3,6]
 -- simple.
 {-
 let studentDB = [
-				 ("sally", 	["cpsc110", "cpsc312", "cpsc204"]),
-				 ("jim", 	["cpsc110", "cpsc313"]),
-				 ("bob", 	["cpsc121", "cpsc303", "cpsc212"]),
-				 ("frank", 	["cpsc110", "cpsc212", "cpsc204"]),
-				 ("billy", 	["cpsc312", "cpsc236"]),
-				 ("jane", 	["cpsc121"]),
-				 ("larry", 	["cpsc411", "cpsc236"]) ]
+	("sally", 	["cpsc110", "cpsc312", "cpsc204"]),
+	("jim", 	["cpsc110", "cpsc313"]),
+	("bob", 	["cpsc121", "cpsc303", "cpsc212"]),
+	("frank", 	["cpsc110", "cpsc212", "cpsc204"]),
+	("billy", 	["cpsc312", "cpsc236"]),
+	("jane", 	["cpsc121"]),
+	("larry", 	["cpsc411", "cpsc236"]) ]
 -}
 
 -- studentClasses takes a name and returns the classes the student has
 -- taken by accessing the "snd" part of the database tuple.
 --studentClasses :: [Char] -> [Char]
 studentClasses s d = head [snd x | x <- d, fst x == s]
+
+-- romanDigit takes a single character in ['0'..'9'] and returns itsroman numeral.
+romanDigit :: Char -> String
+romanDigit num
+	| num == '0' = ""
+	| num == '9' = "IX"
+	| num == '8' = "VIII"
+	| num == '7' = "VII"
+	| num == '6' = "VI"
+	| num == '5' = "V"
+	| num == '4' = "IV"
+	| num == '3' = "III"
+	| num == '2' = "II"
+	| num == '1' = "I"
+
+-- Test cases for removeDups
+{-
+romanDigit '0' == ""
+romanDigit '4' == "IV"
+romanDigit '9' == "IX"
+-}
 
