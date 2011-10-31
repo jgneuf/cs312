@@ -3,14 +3,14 @@
 import System.IO.Unsafe
 
 -- Point is an x-y coordinate on the board.
-data Point = Point (Int, Int) | NullPoint deriving (Eq, Show)
+data Point = Point (Int, Int) deriving (Eq, Show)
 
 -- Helper functions to access the x and y coordinates of a Point.
 px (Point (x, _)) = x
 py (Point (_, y)) = y
 
 -- Move datatype stores x-y coordinate of starting and ending positions.
-data Move = Move (Point, Point) deriving (Show, Eq)
+data Move = Move (Point, Point) | NullMove deriving (Show, Eq)
 
 -- BoardState stores a list of white's pieces as points and a list of black's pieces as a tuple, a 
 -- boolean flag indicating whether or not it is white's turn to move, and an Int for the dimension 
@@ -91,24 +91,30 @@ boardUtility (BoardState (whitePieces, blackPieces) whitesTurn dimension)
     | null (map (legalMoves whitePieces 'B' dimension) whitePieces)    = -999
     | otherwise                                                        = 0
 
--- Return a list of legal Points that the Point canmove to. This function assumes the Point contains a
--- piece belonging to the player. There are three possible Points that can be moved to:
+-- Return a list of legal Points that the Point can move to. This function assumes the Point contains a
+-- piece belonging to the player.
+legalMoves opponentPieces player dimension sourcePoint@(Point (x,y)) = 
+    [move | move <- (possibleMoves opponentPieces player dimension sourcePoint), move /= NullMove]
+
+-- There are three possible Points that can be moved to:
 --  1) Forward one space: The same x-coordinate, y-coordinate plus verticalOffset.
 --  2) Forward one space, one space right: x-coordinate plus one, y-coordinate plus verticalOffset. 
 --  3) Forward one space, one space left: x-coordinate minus one, y-coordinate plus verticalOffset.
 -- The verticalOffset is -1 for white (since white can only move down) and 1 for black.
-legalMoves opponentPieces player dimension (Point (x,y)) = 
-    [point | point <- possibleMoves, point /= NullPoint]
-        where   verticalOffset = if player == 'W' then (-1) else (1)
-                possibleMoves  = (if ((elem (Point (x, y + verticalOffset)) opponentPieces)
-                                    || y + verticalOffset < 0 || y + verticalOffset > dimension) 
-                                        then NullPoint else (Point (x, y + verticalOffset))) :
-                                (if ((elem (Point (x - 1, y + verticalOffset)) opponentPieces)
-                                    && y + verticalOffset >= 0 && y + verticalOffset <= dimension) 
-                                        then (Point (x - 1, y + verticalOffset)) else NullPoint) :
-                                (if ((elem (Point (x + 1, y + verticalOffset)) opponentPieces)
-                                    && y + verticalOffset >= 0 && y + verticalOffset <= dimension) 
-                                        then (Point (x + 1, y + verticalOffset)) else NullPoint) : []
+possibleMoves opponentPieces player dimension sourcePoint@(Point (x, y)) =
+    (if (elem pointForward opponentPieces)
+        || y + verticalOffset < 0 || y + verticalOffset > dimension 
+            then NullMove else Move (sourcePoint, pointForward)) :
+    (if (elem pointLeft opponentPieces)
+        && y + verticalOffset >= 0 && y + verticalOffset <= dimension 
+            then Move (sourcePoint, pointLeft) else NullMove) :
+    (if (elem pointRight opponentPieces)
+        && y + verticalOffset >= 0 && y + verticalOffset <= dimension 
+            then Move (sourcePoint, pointRight) else NullMove) : []
+                where   verticalOffset = if player == 'W' then (-1) else (1)
+                        pointForward   = Point (x, y + verticalOffset)
+                        pointLeft      = Point (x - 1, y + verticalOffset)
+                        pointRight     = Point (x + 1, y + verticalOffset)
 
 -- Ask the user for their move in canonical form, i.e. (0,0) is the bottom right of the board and
 -- values increase left and up. This function checks the user's move is legal on the given board, and
@@ -116,7 +122,7 @@ legalMoves opponentPieces player dimension (Point (x,y)) =
 getInput board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) player = do
     -- Print the board to the screen to show available moves. Remind the user to use canonical form.
     putStr ("* Use canonical form, where (0,0) is bottom\nleft and values increase right and up!\n")
-    putStr ("Here's the board:\n" ++ (show board))
+    putStr ("Here's the board:\n\n" ++ (show board) ++ "\n")
 
     -- Get x,y coordinate of piece to move and make a Point out of it.
     putStr "Enter starting x coordinate: "
@@ -138,7 +144,8 @@ getInput board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) play
 
     -- If the move is illegal, recurse. Otherwise return the Move.
     if (not (elem sourcePoint playersPieces)) 
-        ||  (not (elem targetPoint (legalMoves opponentsPieces player dimension sourcePoint))) 
+        ||  (not (elem (Move (sourcePoint, targetPoint)) 
+                 (legalMoves opponentsPieces player dimension sourcePoint))) 
             then getInput board player
             else return (Move (sourcePoint, targetPoint))
                 where   opponentsPieces = if player == 'W' then blackPieces else whitePieces
@@ -168,7 +175,6 @@ applyMove (BoardState (whitePieces, blackPieces) whitesTurn dimension) player (M
     | otherwise 
         = BoardState (whitePieces, (target : (deleteMove blackPieces source))) 
             notWhitesTurn dimension 
-        
         where notWhitesTurn = not whitesTurn 
 
 -- Take a list of points (the whitePieces or blackPieces from a BoardState) and a Point and return the
@@ -184,4 +190,10 @@ deleteMove allPoints oldPoint
 -- hexapawn, the calling function, to search a certain depth. By default, it searches the full depth of
 -- the game tree. The initial alpha and beta values are -999 and 999, respectively.
 aiMove board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) depth alpha beta = board 
+    where   possibleMoves  = map (legalMoves whitePieces 'B' dimension) blackPieces
+            possibleBoards = map (applyMove board 'B') possibleMoves
+
+negascout board depth alpha beta
+    | depth == 0 || utility == BWIN || utility == WWIN  = utility
+        where utility = boardUtility board
 
