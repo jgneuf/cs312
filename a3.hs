@@ -61,7 +61,7 @@ hexapawn board@(BoardState _ whitesTurn dimension)
     | boardUtility board 1 <= -100 = (show board) ++ "\n\nWhite wins."
     | whitesTurn                    = hexapawn (playerMove board 'W')
     | otherwise                     = hexapawn (aiMove board depth alpha beta)
-        where depth = dimension
+        where depth = 3
               alpha = 0
               beta  = 0
 
@@ -88,7 +88,7 @@ boardUtility (BoardState (whitePieces, blackPieces) whitesTurn dimension) depth
     | null (map (legalMoves whitePieces 'B' dimension) blackPieces)    
         = -100 * factor
     | otherwise = pieceDifference * factor
-        where factor = depth + 1
+        where factor = (10* depth) + 1
               pieceDifference = (length blackPieces) - (length whitePieces)
 
 -- Return a list of legal Points that the Point can move to. This function assumes the 
