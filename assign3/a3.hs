@@ -36,10 +36,8 @@ instance Show BoardState where
 -- the screen more user friendly, as each line contains the pieces on that line.
 printBoard points currentVal dimension 
     | null (tail points) = head points 
-    | currentVal == 0    = head points ++ "\n" 
-        ++ printBoard (tail points) dimension dimension
-    | otherwise          = head points
-        ++ printBoard (tail points) (currentVal - 1) dimension
+    | currentVal == 0    = head points ++ "\n" ++ printBoard (tail points) dimension dimension
+    | otherwise          = head points ++ printBoard (tail points) (currentVal - 1) dimension
 
 -- Store the utility of a BoardState in terms of the AI. We use this for search. 
 data Utility = Utility Int deriving (Show, Ord, Eq)
@@ -57,13 +55,13 @@ genBoard n
 -- the AI's move and switch players until the game is over.
 hexapawn :: BoardState -> String
 hexapawn board@(BoardState _ whitesTurn dimension)
-    | boardUtility board 1 >= 100  = (show board) ++ "\n\nBlack wins."
-    | boardUtility board 1 <= -100 = (show board) ++ "\n\nWhite wins."
+    | boardUtility board 1 >= 1000  = (show board) ++ "\n\nBlack wins."
+    | boardUtility board 1 <= -1000 = (show board) ++ "\n\nWhite wins."
     | whitesTurn                    = hexapawn (playerMove board 'W')
     | otherwise                     = hexapawn (aiMove board depth alpha beta)
-        where depth = 3
-              alpha = 0
-              beta  = 0
+        where depth = dimension * dimension
+              alpha = -999999
+              beta  = 999999
 
 -- Start a game of hexapawn on a NxN board. Disallow boards smaller than 3x3 and 
 -- larger than 6x6 for now.
@@ -77,18 +75,18 @@ play n
 -- used in search.
 boardUtility :: BoardState -> Int -> Int
 boardUtility (BoardState (whitePieces, blackPieces) whitesTurn dimension) depth
-    | null whitePieces = 100 * factor 
-    | null blackPieces = -100 * factor 
+    | null whitePieces = 1000 * factor 
+    | null blackPieces = 1000 * factor 
     | not (null [point | point <- blackPieces, py point == dimension]) 
-        = 100 * factor
+        = 1000 * factor
     | not (null [point | point <- whitePieces, py point == 0])         
-        = -100 * factor
+        = 1000 * factor
     | null (map (legalMoves blackPieces 'W' dimension) whitePieces)    
-        = 100 * factor
+        = 1000 * factor
     | null (map (legalMoves whitePieces 'B' dimension) blackPieces)    
-        = -100 * factor
+        = 1000 * factor
     | otherwise = pieceDifference * factor
-        where factor = (10* depth) + 1
+        where factor = (2 * depth) + 1
               pieceDifference = (length blackPieces) - (length whitePieces)
 
 -- Return a list of legal Points that the Point can move to. This function assumes the 
@@ -126,7 +124,7 @@ getInput board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) play
     -- Print the board to the screen to show available moves. Remind the user to use 
     -- canonical form.
     putStr ("Use canonical form, (0,0) is bottom left, increasing right and up.\n")
-    putStr ("Here's the board:\n\n" ++ (show board) ++ "\n")
+    putStr ((show player) ++ " to move:\n\n" ++ (show board) ++ "\n")
 
     -- Get x,y coordinate of piece to move and make a Point out of it.
     putStr "Enter starting x coordinate: "
@@ -176,7 +174,7 @@ playerMove board player = applyMove board player usersMove
 applyMove (BoardState (whitePieces, blackPieces) whitesTurn dimension) player (Move (source, target))
     | player == 'W' && elem target blackPieces 
         = BoardState (target : (deleteMove whitePieces source), 
-            (deleteMove blackPieces source)) notWhitesTurn dimension
+            (deleteMove blackPieces target)) notWhitesTurn dimension
     | player == 'B' && elem target whitePieces
         = BoardState ((deleteMove whitePieces target), 
             target : (deleteMove blackPieces source)) notWhitesTurn dimension
@@ -201,12 +199,14 @@ deleteMove allPoints oldPoint
 -- be tweaked from hexapawn, the calling function, to search a certain depth. By 
 -- default, it searches the full depth of the game tree. The initial alpha and beta 
 -- values are -999 and 999, respectively.
-aiMove board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) depth alpha beta = bestBoard boardUtilPairs
-    where possibleMoves  = concat (map (legalMoves whitePieces 'B' dimension) 
-                                blackPieces)
-          possibleBoards = map (applyMove board 'B') possibleMoves
-          boardUtilPairs = zip possibleBoards (map (negascout (depth - 1) 
-                            alpha beta 'B') possibleBoards)
+aiMove :: BoardState -> Int -> Int -> Int -> BoardState
+aiMove board@(BoardState (whitePieces, blackPieces) whitesTurn dimension) depth alpha beta
+    | null boardUtilPairs = error "No possible moves, game should be over."
+    | otherwise           = bestBoard boardUtilPairs
+        where possibleMoves  = concat (map (legalMoves whitePieces 'B' dimension) blackPieces)
+              possibleBoards = map (applyMove board 'B') possibleMoves
+              boardUtilPairs = zip (possibleBoards) (map (negascout depth
+                                ((-1) * beta) ((-1) * alpha) 'W') possibleBoards)
 
 -- Given a list of tuples with BoardStates and their corresponding utilities, return
 -- the BoardState with the greatest utility.
@@ -219,29 +219,29 @@ bestBoard pairs = head [fst pair | pair <- pairs, snd pair == maxUtil]
 -- procedural language. The helper function is shortCircuitFold.
 negascout :: Int -> Int -> Int -> Char -> BoardState -> Int 
 negascout depth alpha beta player board@(BoardState (whitePieces, blackPieces) _ dimension)
-    | depth == 0 || utility >= 100 || utility <= -100 = utility
-    | otherwise = shortCircuitFold possibleBoards depth alpha beta beta player True
+    | utility >= 1000 || utility <= -1000 = utility
+    | null possibleMoves                  = utility
+    | otherwise = (-1) * (shortCircuitFold possibleBoards depth alpha beta beta player True)
         where utility = boardUtility board depth
-              possibleMoves  = concat (map (legalMoves whitePieces player dimension)
-                                blackPieces)
+              opponentPieces = if player == 'B' then whitePieces else blackPieces
+              playerPieces   = if player == 'B' then blackPieces else whitePieces
+              possibleMoves  = concat (map (legalMoves opponentPieces player dimension)
+                                playerPieces)
               possibleBoards = map (applyMove board player) possibleMoves
 
 -- Helper function for negascout.
 shortCircuitFold :: [BoardState] -> Int -> Int -> Int -> Int -> Char -> Bool -> Int
 shortCircuitFold boards depth alpha beta b player notFirst
-    | length boards == 1 = a
-    | a >= beta          = a
+    | null boards = error "shortCircuitFold received empty list"
+    | length boards == 1 = (-1) * a
+    | a >= beta          = (-1) * a
     | otherwise          = shortCircuitFold (tail boards) depth 
-                        alpha beta (a + 1) player False
+                            a beta (a + 1) player False
         where board  = head boards
-              score1 = (-1)*(negascout (depth - 1) (-1 * b) (-1 * alpha) player board)
-              score2 = (-1)*(negascout (depth - 1) (-1 * beta) (-1 * alpha) player board)
+              score1 = (negascout (depth - 1) (-1 * b) (-1 * alpha) opposingPlayer board)
+              score2 = (negascout (depth - 1) (-1 * beta) (-1 * alpha) opposingPlayer board)
               score  = if score1 > alpha && score1 < beta && notFirst
                         then score2 else score1
               a      = max alpha score
+              opposingPlayer = if player == 'W' then 'B' else 'W'
 
-{-
- 
-let b = (BoardState ([Point (0,1), Point (1,2), Point (2,2)], [Point (0,0), Point (1,0), Point (2,0)]) False 2) 
-
- -}
