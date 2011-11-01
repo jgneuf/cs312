@@ -39,9 +39,6 @@ printBoard points currentVal dimension
     | currentVal == 0    = head points ++ "\n" ++ printBoard (tail points) dimension dimension
     | otherwise          = head points ++ printBoard (tail points) (currentVal - 1) dimension
 
--- Store the utility of a BoardState in terms of the AI. We use this for search. 
-data Utility = Utility Int deriving (Show, Ord, Eq)
-
 -- Generate a NxN board to start the game with.
 genBoard n 
     | n <= 2    = error "Board size is too small."
@@ -55,11 +52,13 @@ genBoard n
 -- the AI's move and switch players until the game is over.
 hexapawn :: BoardState -> String
 hexapawn board@(BoardState _ whitesTurn dimension)
-    | boardUtility board 1 >= 1000  = (show board) ++ "\n\nBlack wins."
-    | boardUtility board 1 <= -1000 = (show board) ++ "\n\nWhite wins."
-    | whitesTurn                    = hexapawn (playerMove board 'W')
-    | otherwise                     = hexapawn (aiMove board depth alpha beta)
-        where depth = dimension * dimension
+    | boardUtility board 1 >= 1000 && whitesTurn
+        = (show board) ++ "\nBlack wins."
+    | boardUtility board 1 >= 1000 && not whitesTurn
+        = (show board) ++ "\nWhite wins."
+    | whitesTurn = hexapawn (playerMove board 'W')
+    | otherwise  = hexapawn (aiMove board depth alpha beta)
+        where depth = dimension
               alpha = -999999
               beta  = 999999
 
@@ -69,25 +68,21 @@ play n
     | n < 3     = error "Board size too small, minimum is 3x3."
     | otherwise = hexapawn (genBoard n)
 
--- Return the utility of the board for black. This can be used to determine whether 
--- the game is over, since if the result is BWIN or WWIN, the game has been won by one 
--- of the players. Otherwise, it returns the utility of the board for black, the AI, 
--- used in search.
+-- Return the utility of the board for black.
 boardUtility :: BoardState -> Int -> Int
 boardUtility (BoardState (whitePieces, blackPieces) whitesTurn dimension) depth
-    | null whitePieces = 1000 * factor 
-    | null blackPieces = 1000 * factor 
-    | not (null [point | point <- blackPieces, py point == dimension]) 
-        = 1000 * factor
-    | not (null [point | point <- whitePieces, py point == 0])         
-        = 1000 * factor
-    | null (map (legalMoves blackPieces 'W' dimension) whitePieces)    
-        = 1000 * factor
-    | null (map (legalMoves whitePieces 'B' dimension) blackPieces)    
-        = 1000 * factor
+    | null whitePieces || null blackPieces = 1000 * factor 
+    | (not (null [point | point <- blackPieces, py point == dimension])) 
+        || (not (null [point | point <- whitePieces, py point == 0]))         
+            = 1000 * factor
+    | null (concat (map (legalMoves opponentPieces player dimension) playerPieces))    
+        = 1000 * factor   
     | otherwise = pieceDifference * factor
         where factor = (2 * depth) + 1
               pieceDifference = (length blackPieces) - (length whitePieces)
+              player = if whitesTurn then 'W' else 'B'
+              opponentPieces = if whitesTurn then blackPieces else whitePieces
+              playerPieces   = if whitesTurn then whitePieces else blackPieces
 
 -- Return a list of legal Points that the Point can move to. This function assumes the 
 -- Point contains a piece belonging to the player.
@@ -219,9 +214,9 @@ bestBoard pairs = head [fst pair | pair <- pairs, snd pair == maxUtil]
 -- procedural language. The helper function is shortCircuitFold.
 negascout :: Int -> Int -> Int -> Char -> BoardState -> Int 
 negascout depth alpha beta player board@(BoardState (whitePieces, blackPieces) _ dimension)
-    | utility >= 1000 || utility <= -1000 = utility
+    | depth == 0 || utility >= 1000 || utility <= -1000 = utility
     | null possibleMoves                  = utility
-    | otherwise = (-1) * (shortCircuitFold possibleBoards depth alpha beta beta player True)
+    | otherwise = (shortCircuitFold possibleBoards depth alpha beta beta player True)
         where utility = boardUtility board depth
               opponentPieces = if player == 'B' then whitePieces else blackPieces
               playerPieces   = if player == 'B' then blackPieces else whitePieces
@@ -240,8 +235,7 @@ shortCircuitFold boards depth alpha beta b player notFirst
         where board  = head boards
               score1 = (negascout (depth - 1) (-1 * b) (-1 * alpha) opposingPlayer board)
               score2 = (negascout (depth - 1) (-1 * beta) (-1 * alpha) opposingPlayer board)
-              score  = if score1 > alpha && score1 < beta && notFirst
-                        then score2 else score1
-              a      = max alpha score
+              score  = if score1 > alpha && score1 < beta && notFirst then score2 else score1
               opposingPlayer = if player == 'W' then 'B' else 'W'
+              a = max alpha score
 

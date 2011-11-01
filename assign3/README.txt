@@ -34,7 +34,8 @@ greater chance of being pruned. My second goal was to use this extra time to my 
 many subtrees I pruned off. If I pruned off 20-30% (just a guess), then I could search an extra ply or two
 on the subtrees that I didn't prune.
 
-In the end I didn't have time to do that and my code doesn't actually do what I want it to even in the
-simple cases; my AI is dumb. That's not to say it doesn't win games, and sometimes it seems to make some
-pretty smart moves, but more often that I'd like it's just wretchedly stupid.
+In the end negascout works extremely well. As far as the AI goes I can't beat it. It scales to large 
+boards extremely well and I imagine if I (or you) had the patience to actually play it on a large board 
+it would still win. Still, I would have liked to implement some awesome heuristics like move order 
+sorting and variable depth search. Do I get a bonus point for cute ideas?
 
