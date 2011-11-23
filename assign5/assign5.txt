@@ -1,0 +1,76 @@
+Student Name: Jonathan Neufeld
+Student ID: 30671093
+CS ID: p9d8
+
+Question 1
+
+1) 
+decision(	state( [4 | Rest], tarmac ),
+			option1,
+			option2( state( [4,4,7], tarmac ) ),
+			option2 ).
+decision(	X,
+			option1,
+			option2( X ),
+			Option ).
+
+MGU: X = state( [4,4,7], tarmac ), Option = option2.
+NOTE: Rest = [4,7].
+
+MGCI: 
+decision(	state( [4,4,7], tarmac ),
+			option1,
+			option2( state( [4,4,7], tarmac ) ),
+			option2 ).
+
+2)
+decision(	state,
+			option1,
+			option2,
+			selection ).
+decision(	S,
+			[option1, option2],
+			S1 ).
+
+Does not unify. First is decision/4, second is decision/3,
+although S unifies with state and S1 unifies with selection,
+the arities are off and there is nothing "in the middle"
+that can unify.
+
+3)
+decision(	X,
+			[option1, option2],
+			selection( Y, X ) ).
+decision(	world( M ),
+			.(option1, Option2),	/* TODO */
+			selection( X, Y ) ).
+
+MGU: X = world( M ), Option2 = option2, X = Y, Y = X.
+MGCI: 
+decision(	world( M ),
+			[option1, option2],
+			selection( X, Y ) ).
+
+4)
+decision( Args ).
+decision(	state,
+			option1,
+			option2,
+			selection( option1 ) ).
+
+Does not unify, arity mismatch.
+
+5)
+Var(	state( Y ),
+		option1( X, 'do_this' ),
+		option2( 'Add' ),
+		select( Add ) ).
+decision(	X,
+			option1( Y, do_this ),
+			option2( 4 + 7 ),
+			select( + ( 4,7 ) ) ).
+
+Question 2
+1)
+2) 2, false.
+3) 
