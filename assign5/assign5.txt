@@ -45,7 +45,7 @@ decision(	world( M ),
 			.(option1, Option2),	/* TODO */
 			selection( X, Y ) ).
 
-MGU: X = world( M ), Option2 = option2, X = Y, Y = X.
+MGU: X = world( M ), Option2 = [option2], X = Y, Y = X.
 MGCI: 
 decision(	world( M ),
 			[option1, option2],
@@ -70,7 +70,58 @@ decision(	X,
 			option2( 4 + 7 ),
 			select( + ( 4,7 ) ) ).
 
+Functor can't be a variable, i.e. Var can't unify with anything.
+To fix, we should just use decision.
+
+'do_this' and do_this are two different atoms. Either replace one
+with a variable or make them the same.
+
+Can't do arithmetic in option2( 4 + 7 ). Either use a variable or
+say option2( N ), N is 4 + 7.
+
+
 Question 2
-1)
-2) 2, false.
-3) 
+a) 
+1) 
+N = s(s(0)) ;	/* N = 2 */
+N = s(0) ;		/* N = 1 */
+N = s(0) ;		/* N = 1 */
+N = 0 ;	
+false.
+
+2) N = s(s(0)) ; /* N = 2 */
+false.
+
+3) The first query gives the number of first argument in the second
+argument, subsequent queries give the counts for sublists of the
+second argument.
+
+c) Moving the third line before the first reverses the order of results,
+so it would be a bad idea to use this and implement a cut. The search
+tree looks for lists where the first element does not match the first
+argument before checking if the list is empty.
+
+Moving the first line to the third, the second line to the first and the
+third to the second seems to give the results in the proper order but
+the search tree always looks for sublists before checking for empty
+second argument.
+
+Question 3
+The length predicate says L always has four elements and the count
+predicate ensures there are always two a's in L. Prolog goes about
+finding what sorts of lists we can build that satisfy these conditions.
+[a, a, _, _], [a, _, a, _], [a, _, _, a], [_, a, a, _], [_, a, _, a],
+and [_, _, a, a] satisfy these conditions.
+
+Question 4
+count( X, [], 0 ).
+count( X, [X | Xs], s(N) ) :- !, count( X, Xs, N ).
+count( X, [Y | Ys], N ) :- count( X, Ys, N ).
+
+This gives only the first value count returns, which is what count
+should intuitively return. However, using cut means that after going
+past that point in the search tree means only that value can be returned,
+we can't backtrack and get something else. When we try the query from
+Question 3 we only get the first list because we can't generate any
+others from the way count is defined; after the first one, we cut, and
+can't go back to check for more. Hence it can't be used for part (d).
